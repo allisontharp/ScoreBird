@@ -26,7 +26,7 @@ function get-NFLScores(){
     return $GamesArray
 }
 
-function compare-Scores($PreviousScores, $CurrentScores){
+function compare-Scores($PreviousScores, $CurrentScores, $MyTeams){
     $Output = New-Object System.Collections.ArrayList
     
     foreach($game in $PreviousScores){
@@ -36,13 +36,17 @@ function compare-Scores($PreviousScores, $CurrentScores){
         $AwayDiff = $CurrentScoreForGame.AwayScore - $Game.AwayScore
 
         if($HomeDiff -gt 0){
-            #$Output += ,($($game.Home), $HomeDiff, "blue")
-            $Output += @{TeamName = $($game.Home); Points = $HomeDiff; Color = "blue"}
+            $TeamName = $game.Home
+            $Color1 = ($MyTeams | Where-Object {$_.Team -eq $TeamName}).Color1
+            if($Color1.count -eq 0){$Color1 = "Red"}
+            $Output += @{TeamName = $TeamName; Points = $HomeDiff; Color = $Color1}
         }
 
         if ($AwayDiff -gt 0){
-            #$Output += ,($($game.Away), $AwayDiff)
-            $Output += @{TeamName = $($game.Away); Points = $AwayDiff; Color = "orange"}
+            $TeamName = $game.Away
+            $Color1 = ($MyTeams | Where-Object {$_.Team -eq $TeamName}).Color1
+            if($Color1.count -eq 0){$Color1 = "Red"}
+            $Output += @{TeamName = $($game.Away); Points = $AwayDiff; Color = $Color1}
         }
     }
 
@@ -73,3 +77,30 @@ function get-NHLScores(){
     }
     return $GamesArray
 }
+
+function invoke-IFTTTTrigger ($Key, $IFTTTrigger, $Body){
+    $MakerURL = "https://maker.ifttt.com/trigger/$IFTTTrigger/with/key/$Key"
+    Invoke-WebRequest -Uri $MakerURL -Method Post -Body (ConvertTo-Json $body) -ContentType application/json
+}
+
+function invoke-ScoreBird ($Scores){
+    foreach($score in $Scores){
+        if($score.TeamName -in $TeamsToMonitor){
+            "Yay! $($score.TeamName) scores!"
+            $body = @{value1="$($score.Points)"; value2="$($Score.Color)"}
+            invoke-IFTTTTrigger -Key $Key -IFTTTrigger "scorebird" -Body $body
+        } else {
+            "Boo! No $($score.TeamName) Score!"
+            $body = @{value1="10"; value2="red"} # value1 is fade_out_duration , value2 is color
+            invoke-IFTTTTrigger -Key $Key -IFTTTrigger "FadeOut" -Body $body
+            Start-Sleep -Seconds 5
+            $body = @{value1="10"; value2="white"} # value1 is fade_out_duration , value2 is color
+            invoke-IFTTTTrigger -Key $Key -IFTTTrigger "FadeIn" -Body $body
+
+            
+        }
+    }
+}
+
+
+
