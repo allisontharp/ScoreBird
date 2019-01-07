@@ -1,3 +1,11 @@
+<#
+    ToDO:
+        - Leagues to add:
+            - Men's College Basketball: http://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard
+            - Men's College Football: http://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard 
+#>
+
+
 function get-NFLScores(){
     $GamesArray = New-Object System.Collections.ArrayList
     
@@ -76,6 +84,33 @@ function get-NHLScores(){
         $GamesArray += $gamesObject
     }
     return $GamesArray
+}
+
+function get-NCAAFScores(){
+    $gamesArray = New-Object System.Collections.ArrayList
+
+    $url = "http://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard"
+    $scores = Invoke-WebRequest -Uri $url | ConvertFrom-Json
+
+    $gameIDs = $scores.events | Select-Object id
+
+    foreach ($gameID in $gameIDs){
+        $gameID = $($gameID.id)
+        $game = $scores.events | Where-Object {$_.id -eq $gameID}
+        $gamesObject = New-Object System.Object
+
+        $gamesObject | Add-Member -MemberType NoteProperty -Name GameID -Value $gameID
+        $gamesObject | Add-Member -MemberType NoteProperty -Name League -Value "NCAAF"
+        $gamesObject | Add-Member -MemberType NoteProperty -Name GameStatus -Value $($game.status.type.shortDetail)
+        
+        $gamesObject | Add-Member -MemberType NoteProperty -Name Home -Value $(($game.competitions[0].competitors | Where-Object {$_.homeAway -eq 'home'}).team.abbreviation)
+        $gamesObject | Add-Member -MemberType NoteProperty -Name HomeScore -Value $(($game.competitions[0].competitors | Where-Object {$_.homeAway -eq 'home'}).score)
+        $gamesObject | Add-Member -MemberType NoteProperty -Name Away -Value $(($game.competitions[0].competitors | Where-Object {$_.homeAway -eq 'away'}).team.abbreviation)
+        $gamesObject | Add-Member -MemberType NoteProperty -Name AwayScore -Value $(($game.competitions[0].competitors | Where-Object {$_.homeAway -eq 'away'}).score)
+
+        $GamesArray += $gamesObject
+    }
+    return $gamesArray
 }
 
 function invoke-IFTTTTrigger ($Key, $IFTTTrigger, $Body){

@@ -7,6 +7,8 @@ $MyTeams += @{League = "NFL"; Team = "IND"; Color1 = "blue"; Color2 = "white"}
 $MyTeams +=  @{League = "NHL"; Team = "Tampa Bay Lightning"; Color1 = "blue"; Color2 = "white"}
 $MyTeams += @{League = "NFL"; Team = "LAC"; Color1 = "yellow"; Color2 = "blue"}
 $MyTeams +=  @{League = "NHL"; Team = "Chicago Blackhawks"; Color1 = "yellow"; Color2 = "green"}
+$MyTeams +=  @{League = "NCAAF"; Team = "CLEM"; Color1 = "orange"; Color2 = "white"}
+$MyTeams +=  @{League = "NCAAF"; Team = "ALA"; Color1 = "red"; Color2 = "white"}
 
 $TimeToRun = 60 #minutes
 $RunTime = 0
