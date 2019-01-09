@@ -1,12 +1,11 @@
-. "funcs.ps1"
-
-
+. "\funcs.ps1"
 
 $PeoplesTeams = New-Object system.Collections.ArrayList
 
 
 $MyTeams = New-Object System.Collections.ArrayList
-$MyTeams +=  @{League = "NHL"; Team = "Tampa Bay Lightning"; Color1 = "blue"; Color2 = ""}
+$MyTeams +=  @{League = "NHL"; Team = "Tampa Bay Lightning"; Color1 = "blue"; Color2 = "white"}
+$MyTeams +=  @{League = "NFL"; Team = "IND"; Color1 = "blue"; Color2 = "white"}
 
 $PeoplesTeams += @{Name="Person1"; Key="Key1"; Teams=$MyTeams}
 
@@ -17,7 +16,7 @@ $PeoplesTeams += @{Name="Person2"; Key="Key2"; Teams=$DadsTeams}
 
 
 $TeamsToMonitor = $PeoplesTeams.teams.team
-$LeaguesToMonitor = $PeoplesTEams.teams.League
+$LeaguesToMonitor = $PeoplesTeams.teams.League
 
 $CurrentScores = get-CurrentScores -OnlyMonitoredTeams 1 -OnlyActiveGames 1 -TeamsToMonitor $TeamsToMonitor -LeaguesToMonitor $LeaguesToMonitor
 $PreviousScores = $CurrentScores
@@ -29,12 +28,12 @@ while ($RunTime -le $TimeToRun*60){
     $CurrentScores = get-CurrentScores -OnlyMonitoredTeams 1 -OnlyActiveGames 1 -TeamsToMonitor $TeamsToMonitor -LeaguesToMonitor $LeaguesToMonitor
 
     foreach($person in $PeoplesTeams){
-        $MyTeams = $person.teams.team
+        $MyTeams = $person.teams
         $Scores = New-Object system.Collections.ArrayList
-        $Scores += compare-Scores -PreviousScores $($PreviousScores | Where-Object {$_.home -in $MyTeams -or $_.away -in $MyTeams}) `
-            -CurrentScores $($CurrentScores | Where-Object {$_.home -in $MyTeams -or $_.away -in $MyTeams}) -MyTeams $($person.Teams)
+        $Scores += compare-Scores -PreviousScores $($PreviousScores | Where-Object {$_.home -in $MyTeams.Team -or $_.away -in $MyTeams.Team}) `
+            -CurrentScores $($CurrentScores | Where-Object {$_.home -in $MyTeams.Team -or $_.away -in $MyTeams.Team}) -MyTeams $($person.Teams)
 
-        invoke-ScoreBird -Scores $Scores -Key $($person.Key) -TeamsToMonitor $MyTeams
+        invoke-ScoreBird -Scores $Scores -MyTeams $MyTeams -token $token
     }
 
     $PreviousScores = $CurrentScores

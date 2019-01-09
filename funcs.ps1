@@ -114,26 +114,15 @@ function get-NCAAFScores(){
     return $gamesArray
 }
 
-function invoke-IFTTTTrigger ($Key, $IFTTTrigger, $Body){
-    $MakerURL = "https://maker.ifttt.com/trigger/$IFTTTrigger/with/key/$Key"
-    $request = Invoke-WebRequest -Uri $MakerURL -Method Post -Body (ConvertTo-Json $body) -ContentType application/json
-}
 
-function invoke-ScoreBird ($Scores, $Key, $TeamsToMonitor){
+function invoke-ScoreBird ($Scores, $myTeams, $token){
     foreach($score in $Scores){
-        if($score.TeamName -in $TeamsToMonitor){
+        if($score.TeamName -in $myTeams.team){
             "Yay! $($score.TeamName) scores!"
-            $body = @{value1="$($score.Points)"; value2="$($Score.Color)"}
-            invoke-IFTTTTrigger -Key $Key -IFTTTrigger "scorebird" -Body $body
+            invoke-Pulse -primaryColor ($MyTeams | Where-Object {$_.team -eq $($score.TeamName)}).color1 -secondaryColor ($MyTeams | Where-Object {$_.team -eq $($score.TeamName)}).color2 -numberBlinks $score.Points -token $token
         } else {
-            "Boo! No $($score.TeamName) Score!"
-            $body = @{value1="10"; value2="red"} # value1 is fade_out_duration , value2 is color
-            invoke-IFTTTTrigger -Key $Key -IFTTTrigger "FadeOut" -Body $body
-            Start-Sleep -Seconds 5
-            $body = @{value1="10"; value2="white"} # value1 is fade_out_duration , value2 is color
-            invoke-IFTTTTrigger -Key $Key -IFTTTrigger "FadeIn" -Body $body
-
-            
+            "Boo! $($score.TeamName) Score!"
+            invoke-Breathe -primaryColor "red" -token $token   
         }
     }
 }
@@ -159,8 +148,13 @@ function get-CurrentScores($OnlyMonitoredTeams, $OnlyActiveGames, $TeamsToMonito
 }
 
 
-function invoke-setLight ($color, $brightness){
+function invoke-setLight ($color, $brightness, $token){
     $url = "https://api.lifx.com/v1/lights/all/state"
+
+    $header = @{
+        "Authorization" = "Bearer $token"
+    }
+
     $body = @{
         "power"="on";
         "color" = "$color";
@@ -169,47 +163,6 @@ function invoke-setLight ($color, $brightness){
 
     Invoke-RestMethod -Headers $header -Uri $url -Body $($body|ConvertTo-Json) -Method Put
 }
-function invoke-cycleColors ($primaryColor, $secondaryColor, $numberBlinks){
-    $url = "https://api.lifx.com/v1/lights/all/cycle"
-    if($primaryColor -ne $secondaryColor) {
-        $body = @{
-            "states" = @(
-                @{"brightness" = 1.0;
-                    "color" = "$primaryColor"},
-                @{"brightness" = 1.0;
-                    "color" = "$secondaryColor"}
-            );
-            "defaults" = @{
-                "power" = "on";
-                "duration" = 0;
-                "fast" = "true"
-            }
-        }
-    } else {
-        $body = @{
-            "states" = @(
-                @{"brightness" = 1.0;
-                    "color" = "$primaryColor"},
-                @{"brightness" = 1.0;
-                    "color" = "white"}
-            );
-            "defaults" = @{
-                "power" = "on";
-                "duration" = 0;
-                "fast" = "true"
-            }
-        }
-        $numberBlinks += $numberBlinks
-    }
-
-    for($i=0; $i -le $numberBlinks; $i++){
-        Invoke-RestMethod -Headers $header -Uri $url -Body $($body|ConvertTo-Json) -Method Post -ContentType application/json
-    }
-
-    invoke-setLight -color "white" -brightness 0.8
-
-}
-
 
 function invoke-Pulse ($primaryColor, $secondaryColor, $numberBlinks, $token){
     $url = "https://api.lifx.com/v1/lights/all/effects/pulse"
@@ -217,7 +170,7 @@ function invoke-Pulse ($primaryColor, $secondaryColor, $numberBlinks, $token){
     $header = @{
         "Authorization" = "Bearer $token"
     }
-    
+
     $body = @{
         "color" = "$primaryColor";
         "from_color" = "$secondaryColor";
@@ -227,4 +180,23 @@ function invoke-Pulse ($primaryColor, $secondaryColor, $numberBlinks, $token){
         "persist" = $false
     }
     Invoke-RestMethod -Headers $header -Uri $url -Body $($body|ConvertTo-Json) -Method Post -ContentType application/json
+}
+
+function invoke-Breathe ($primaryColor, $token){
+    $url = "https://api.lifx.com/v1/lights/all/effects/breathe"
+
+    $header = @{
+        "Authorization" = "Bearer $token"
+    }
+
+    $body = @{
+        "color" = "$primaryColor";
+        "period" = 10;
+        "cycles" = 1;
+        "persist" = $false;
+        "power_on" = $true
+    }
+
+    Invoke-RestMethod -Headers $header -Uri $url -Body $($body|ConvertTo-Json) -Method Post -ContentType application/json
+
 }
