@@ -1,6 +1,7 @@
 <#
     ToDO:
         - Leagues to add:
+            - https://gist.github.com/akeaswaran/b48b02f1c94f873c6655e7129910fc3b
             - Men's College Basketball: http://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard
             - Men's College Football: http://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard 
 #>
@@ -46,14 +47,14 @@ function compare-Scores($PreviousScores, $CurrentScores, $MyTeams){
         if($HomeDiff -gt 0){
             $TeamName = $game.Home
             $Color1 = ($MyTeams | Where-Object {$_.Team -eq $TeamName}).Color1
-            if($Color1.count -eq 0){$Color1 = "Red"}
+            if($Color1.count -eq 0){$Color1 = "red"}
             $Output += @{TeamName = $TeamName; Points = $HomeDiff; Color = $Color1}
         }
 
         if ($AwayDiff -gt 0){
             $TeamName = $game.Away
             $Color1 = ($MyTeams | Where-Object {$_.Team -eq $TeamName}).Color1
-            if($Color1.count -eq 0){$Color1 = "Red"}
+            if($Color1.count -eq 0){$Color1 = "red"}
             $Output += @{TeamName = $($game.Away); Points = $AwayDiff; Color = $Color1}
         }
     }
@@ -115,10 +116,10 @@ function get-NCAAFScores(){
 
 function invoke-IFTTTTrigger ($Key, $IFTTTrigger, $Body){
     $MakerURL = "https://maker.ifttt.com/trigger/$IFTTTrigger/with/key/$Key"
-    Invoke-WebRequest -Uri $MakerURL -Method Post -Body (ConvertTo-Json $body) -ContentType application/json
+    $request = Invoke-WebRequest -Uri $MakerURL -Method Post -Body (ConvertTo-Json $body) -ContentType application/json
 }
 
-function invoke-ScoreBird ($Scores){
+function invoke-ScoreBird ($Scores, $Key, $TeamsToMonitor){
     foreach($score in $Scores){
         if($score.TeamName -in $TeamsToMonitor){
             "Yay! $($score.TeamName) scores!"
@@ -139,3 +140,20 @@ function invoke-ScoreBird ($Scores){
 
 
 
+function get-CurrentScores($OnlyMonitoredTeams, $OnlyActiveGames, $TeamsToMonitor, $LeaguesToMonitor){  
+    if ("NFL" -in $LeaguesToMonitor)  
+        {$CurrentScores = get-NFLScores}
+    if ("NHL" -in $LeaguesToMonitor)
+        {$CurrentScores += get-NHLScores}
+    if ("NCAAF -in $LeaguesToMonitor")
+        {$CurrentScores += get-NCAAFScores}
+    
+    if($OnlyMonitoredTeams -eq 1 -and $OnlyActiveGames -eq 1){
+        $CurrentScores = $CurrentScores| Where-Object {($_.Home -in $($TeamsToMonitor) -or $_.Away -in $($TeamsToMonitor)) -and $_.GameStatus -ne "Final"}
+    }elseif ($OnlyMonitoredTeams -eq 1 -and $OnlyActiveGames -eq 0) {
+        $CurrentScores = $CurrentScores| Where-Object {($_.Home -in $($TeamsToMonitor) -or $_.Away -in $($TeamsToMonitor))}        
+    }elseif ($OnlyMonitoredTeams -eq 0 -and $OnlyActiveGames -eq 1) {
+        $CurrentScores = $CurrentScores| Where-Object {$_.GameStatus -ne "Final"}        
+    }
+    return $CurrentScores 
+}

@@ -1,39 +1,49 @@
-. "\funcs.ps1"
+. "funcs.ps1"
 
-$Key = ""
+
+
+$PeoplesTeams = New-Object system.Collections.ArrayList
+
 
 $MyTeams = New-Object System.Collections.ArrayList
-$MyTeams += @{League = "NFL"; Team = "IND"; Color1 = "blue"; Color2 = "white"}
-$MyTeams +=  @{League = "NHL"; Team = "Tampa Bay Lightning"; Color1 = "blue"; Color2 = "white"}
-$MyTeams += @{League = "NFL"; Team = "LAC"; Color1 = "yellow"; Color2 = "blue"}
-$MyTeams +=  @{League = "NHL"; Team = "Chicago Blackhawks"; Color1 = "yellow"; Color2 = "green"}
-$MyTeams +=  @{League = "NCAAF"; Team = "CLEM"; Color1 = "orange"; Color2 = "white"}
-$MyTeams +=  @{League = "NCAAF"; Team = "ALA"; Color1 = "red"; Color2 = "white"}
+$MyTeams +=  @{League = "NHL"; Team = "Tampa Bay Lightning"; Color1 = "blue"; Color2 = ""}
 
-$TimeToRun = 60 #minutes
-$RunTime = 0
+$PeoplesTeams += @{Name="Person1"; Key="Key1"; Teams=$MyTeams}
 
-$TeamsToMonitor = ($MyTeams | Select-Object @{Name="TeamName"; Expression = {$_.Team}}).TeamName
 
-$CurrentScores = get-NFLScores 
-$CurrentScores += get-NHLScores
-$CurrentScores = $CurrentScores| Where-Object {$_.Home -in $($TeamsToMonitor) -or $_.Away -in $($TeamsToMonitor) -and $_.GameStatus -ne "Final"}
+$DadsTeams = New-Object System.Collections.ArrayList
+$DadsTeams +=  @{League = "NFL"; Team = "IND"; Color1 = "blue"; Color2 = ""}
+$PeoplesTeams += @{Name="Person2"; Key="Key2"; Teams=$DadsTeams}
+
+
+$TeamsToMonitor = $PeoplesTeams.teams.team
+$LeaguesToMonitor = $PeoplesTEams.teams.League
+
+$CurrentScores = get-CurrentScores -OnlyMonitoredTeams 1 -OnlyActiveGames 1 -TeamsToMonitor $TeamsToMonitor -LeaguesToMonitor $LeaguesToMonitor
 $PreviousScores = $CurrentScores
 
-
+$TimeToRun = 4*60
+$RunTime = 0
 while ($RunTime -le $TimeToRun*60){
     Remove-Variable CurrentScores
-    $CurrentScores = get-NFLScores 
-    $CurrentScores += get-NHLScores
-    $CurrentScores = $CurrentScores| Where-Object {$_.Home -in $($TeamsToMonitor) -or $_.Away -in $($TeamsToMonitor) -and $_.GameStatus -ne "Final"}
+    $CurrentScores = get-CurrentScores -OnlyMonitoredTeams 1 -OnlyActiveGames 1 -TeamsToMonitor $TeamsToMonitor -LeaguesToMonitor $LeaguesToMonitor
+
+    foreach($person in $PeoplesTeams){
+        $MyTeams = $person.teams.team
+        $Scores = New-Object system.Collections.ArrayList
+        $Scores += compare-Scores -PreviousScores $($PreviousScores | Where-Object {$_.home -in $MyTeams -or $_.away -in $MyTeams}) `
+            -CurrentScores $($CurrentScores | Where-Object {$_.home -in $MyTeams -or $_.away -in $MyTeams}) -MyTeams $($person.Teams)
+
+        invoke-ScoreBird -Scores $Scores -Key $($person.Key) -TeamsToMonitor $MyTeams
+    }
+
+    $PreviousScores = $CurrentScores
     Start-Sleep -Seconds 10
     $RunTime += 10
-    $PreviousScores = $CurrentScores
-
-    $Scores = New-Object System.Collections.ArrayList
-    $Scores += compare-Scores -PreviousScores $PreviousScores -CurrentScores $CurrentScores -MyTeams $MyTeams
-    
-    invoke-ScoreBird -Scores $Scores 
+    $LeaguesToMonitor = $CurrentScores.League
 }
+
+
+
 
 
