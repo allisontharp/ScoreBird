@@ -157,3 +157,74 @@ function get-CurrentScores($OnlyMonitoredTeams, $OnlyActiveGames, $TeamsToMonito
     }
     return $CurrentScores 
 }
+
+
+function invoke-setLight ($color, $brightness){
+    $url = "https://api.lifx.com/v1/lights/all/state"
+    $body = @{
+        "power"="on";
+        "color" = "$color";
+        "brightness" = $brightness
+    }
+
+    Invoke-RestMethod -Headers $header -Uri $url -Body $($body|ConvertTo-Json) -Method Put
+}
+function invoke-cycleColors ($primaryColor, $secondaryColor, $numberBlinks){
+    $url = "https://api.lifx.com/v1/lights/all/cycle"
+    if($primaryColor -ne $secondaryColor) {
+        $body = @{
+            "states" = @(
+                @{"brightness" = 1.0;
+                    "color" = "$primaryColor"},
+                @{"brightness" = 1.0;
+                    "color" = "$secondaryColor"}
+            );
+            "defaults" = @{
+                "power" = "on";
+                "duration" = 0;
+                "fast" = "true"
+            }
+        }
+    } else {
+        $body = @{
+            "states" = @(
+                @{"brightness" = 1.0;
+                    "color" = "$primaryColor"},
+                @{"brightness" = 1.0;
+                    "color" = "white"}
+            );
+            "defaults" = @{
+                "power" = "on";
+                "duration" = 0;
+                "fast" = "true"
+            }
+        }
+        $numberBlinks += $numberBlinks
+    }
+
+    for($i=0; $i -le $numberBlinks; $i++){
+        Invoke-RestMethod -Headers $header -Uri $url -Body $($body|ConvertTo-Json) -Method Post -ContentType application/json
+    }
+
+    invoke-setLight -color "white" -brightness 0.8
+
+}
+
+
+function invoke-Pulse ($primaryColor, $secondaryColor, $numberBlinks, $token){
+    $url = "https://api.lifx.com/v1/lights/all/effects/pulse"
+
+    $header = @{
+        "Authorization" = "Bearer $token"
+    }
+    
+    $body = @{
+        "color" = "$primaryColor";
+        "from_color" = "$secondaryColor";
+        "period" = 1;
+        "cycles" = $numberBlinks;
+        "power_on" = $true;
+        "persist" = $false
+    }
+    Invoke-RestMethod -Headers $header -Uri $url -Body $($body|ConvertTo-Json) -Method Post -ContentType application/json
+}
